@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}Settings{% endblock %}
+{% block breadcrumb %}Settings{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h2>Settings</h2>
+</div>
+
+<div class="settings-layout">
+  <nav class="settings-nav">
+    <a href="?tab=mikrotik" class="{% if tab=='mikrotik' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      MikroTik
+    </a>
+    <a href="?tab=wireguard" class="{% if tab=='wireguard' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      WireGuard
+    </a>
+    <a href="?tab=panel" class="{% if tab=='panel' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Panel
+    </a>
+  </nav>
+
+  <div class="settings-content">
+    {% if tab == 'mikrotik' %}
+    <div class="settings-title">MikroTik Connection</div>
+    <form method="post">
+      <input type="hidden" name="action" value="mikrotik">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Host / IP</label>
+          <input type="text" name="mt_host" value="{{ cfg.MT_HOST }}">
+        </div>
+        <div class="form-group">
+          <label>Port</label>
+          <input type="number" name="mt_port" value="{{ cfg.MT_PORT }}">
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="mt_user" value="{{ cfg.MT_USER }}">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="mt_pass" placeholder="Leave blank to keep current">
+          <span class="form-hint">Leave blank to keep current password</span>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+
+    {% elif tab == 'wireguard' %}
+    <div class="settings-title">WireGuard Config Generation</div>
+    <form method="post">
+      <input type="hidden" name="action" value="wireguard">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Server Endpoint</label>
+          <input type="text" name="endpoint" value="{{ cfg.WG_SERVER_ENDPOINT }}">
+          <span class="form-hint">IP:Port shown in client config files</span>
+        </div>
+        <div class="form-group">
+          <label>Client DNS</label>
+          <input type="text" name="dns" value="{{ cfg.WG_SERVER_DNS }}">
+          <span class="form-hint">DNS server assigned to clients</span>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+
+    {% elif tab == 'panel' %}
+    <div class="settings-title">Panel Settings</div>
+    <form method="post">
+      <input type="hidden" name="action" value="panel">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Admin Username</label>
+          <input type="text" name="admin_user" value="{{ cfg.ADMIN_USER }}">
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" name="admin_pass" placeholder="Leave blank to keep current">
+        </div>
+        <div class="form-group">
+          <label>Traffic Collection Interval (seconds)</label>
+          <input type="number" name="interval" value="{{ cfg.COLLECT_INTERVAL }}" min="60">
+          <span class="form-hint">How often traffic stats are pulled from MikroTik</span>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg></div>
+    <div><div class="stat-val" id="st-total">{{ total_peers }}</div><div class="stat-lbl">Total Peers</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+    <div><div class="stat-val" id="st-active">{{ active_peers }}</div><div class="stat-lbl">Active</div></div>
+  </div>
+  <div class="stat-card" style="border-color:#22c55e30">
+    <div class="stat-icon g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+    <div><div class="stat-val" id="st-online" style="color:var(--green)">—</div><div class="stat-lbl">Online Now</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+    <div><div class="stat-val" id="st-tx">{{ total_tx | humanize }}</div><div class="stat-lbl">Total TX</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+    <div><div class="stat-val" id="st-rx">{{ total_rx | humanize }}</div><div class="stat-lbl">Total RX</div></div>
+  </div>
+  {% if wallet_balance is not none %}
+  <div class="stat-card" style="border-color:#7c5cbf40;cursor:pointer" onclick="document.getElementById('walletModal').classList.add('open')">
+    <div class="stat-icon p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
+    <div>
+      <div class="stat-val" style="color:{% if wallet_balance < 5 %}var(--red){% elif wallet_balance < 20 %}var(--orange){% else %}var(--purple){% endif %}">
+        {{ '%.1f'|format(wallet_balance) }} GB
+      </div>
+      <div class="stat-lbl">Wallet Balance <span style="font-size:10px;color:var(--accent)">▸ History</span></div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if wallet_balance is not none %}
+<!-- Wallet warning -->
+{% if wallet_balance < 5 %}
+<div style="background:#ef444415;border:1px solid #ef444440;border-radius:6px;padding:10px 14px;
+            display:flex;align-items:center;gap:10px;font-size:13px;color:var(--red)">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+  Low wallet balance — <strong>{{ '%.1f'|format(wallet_balance) }} GB</strong> remaining. Contact admin to recharge.
+</div>
+{% endif %}
+
+<!-- Wallet History Modal -->
+<div class="modal" id="walletModal">
+  <div class="modal-box" style="max-width:680px">
+    <div class="modal-header">
+      <div>
+        <h3>Wallet History</h3>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">
+          Current Balance: <strong style="color:var(--accent)">{{ '%.2f'|format(wallet_balance) }} GB</strong>
+        </div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('walletModal').classList.remove('open')">✕</button>
+    </div>
+    <div style="padding:0">
+
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border-bottom:1px solid var(--border)">
+        {% set total_charged = namespace(v=0) %}
+        {% set total_deducted = namespace(v=0) %}
+        {% for t in transactions %}
+          {% if t['type']=='charge' %}{% set total_charged.v = total_charged.v + t['amount_gb'] %}{% endif %}
+          {% if t['type']=='deduct' %}{% set total_deducted.v = total_deducted.v + t['amount_gb'] %}{% endif %}
+        {% endfor %}
+        <div style="background:var(--bg3);padding:14px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--green)">{{ '%.1f'|format(total_charged.v) }} GB</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Total Charged</div>
+        </div>
+        <div style="background:var(--bg3);padding:14px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--red)">{{ '%.1f'|format(total_deducted.v) }} GB</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Total Used</div>
+        </div>
+        <div style="background:var(--bg3);padding:14px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--accent)">{{ '%.1f'|format(wallet_balance) }} GB</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Remaining</div>
+        </div>
+      </div>
+
+      <!-- Transactions table -->
+      <div style="max-height:400px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead style="position:sticky;top:0;z-index:1">
+            <tr>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;background:var(--bg3);border-bottom:1px solid var(--border)">Date</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;background:var(--bg3);border-bottom:1px solid var(--border)">Type</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;background:var(--bg3);border-bottom:1px solid var(--border)">Amount</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;background:var(--bg3);border-bottom:1px solid var(--border)">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for t in transactions %}
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 14px;font-size:12px;color:var(--text2)">{{ t['created_at'][:16] }}</td>
+            <td style="padding:9px 14px">
+              {% if t['type']=='charge' %}
+                <span class="badge badge-green">＋ Charge</span>
+              {% else %}
+                <span class="badge badge-orange">－ Deduct</span>
+              {% endif %}
+            </td>
+            <td style="padding:9px 14px;font-weight:600;
+                       color:{% if t['type']=='charge' %}var(--green){% else %}var(--red){% endif %}">
+              {% if t['type']=='charge' %}+{% else %}−{% endif %}{{ '%.2f'|format(t['amount_gb']) }} GB
+            </td>
+            <td style="padding:9px 14px;font-size:12px;color:var(--text2)">{{ t['note'] or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="text-align:center;padding:28px;color:var(--text3)">No transactions yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('walletModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Online Users -->
+<div class="panel">
+  <div class="panel-header">
+    <span class="panel-title">
+      <span style="display:inline-block;width:7px;height:7px;background:var(--green);border-radius:50%;margin-left:6px;animation:pulse 2s infinite"></span>
+      Online Users
+    </span>
+    <span id="online-badge" class="badge badge-green">— online</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Interface</th><th>Address</th><th>Last Handshake</th><th>TX</th><th>RX</th></tr></thead>
+      <tbody id="online-tbody">
+        <tr class="empty-row"><td colspan="6">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if session.role == 'admin' %}
+<!-- Interfaces - فقط برای admin -->
+<div class="panel">
+  <div class="panel-header"><span class="panel-title">Interfaces</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Public Key</th><th>Port</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for iface in interfaces %}
+        <tr>
+          <td class="bright">{{ iface.get('name') }}</td>
+          <td class="mono">{{ iface.get('public-key','')[:40] }}...</td>
+          <td>{{ iface.get('listen-port','') }}</td>
+          <td>{% if iface.get('running')=='true' %}<span class="badge badge-green">Running</span>
+          {% else %}<span class="badge badge-red">Stopped</span>{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr class="empty-row"><td colspan="4">No interfaces found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Peers -->
+<div class="panel">
+  <div class="panel-header">
+    <span class="panel-title">{% if session.role=='admin' %}Recent Peers{% else %}My Peers{% endif %}</span>
+    <a href="{{ url_for('peers_list') }}" class="btn btn-sm">View All</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Interface</th><th>TX</th><th>RX</th><th>Expires</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for p in peers[:8] %}
+        <tr class="{% if p['disabled'] %}disabled-row{% endif %}">
+          <td><a href="{{ url_for('peer_detail', peer_id=p['id']) }}" class="peer-name">{{ p['comment'] or '—' }}</a></td>
+          <td><span class="badge badge-blue">{{ p['interface'] }}</span></td>
+          <td>{{ p['total_tx'] | humanize }}</td>
+          <td>{{ p['total_rx'] | humanize }}</td>
+          <td class="muted">{{ p['expiry_date'] or '—' }}</td>
+          <td>{% if p['disabled'] %}<span class="badge badge-red">Disabled</span>
+          {% else %}<span class="badge badge-green">Active</span>{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr class="empty-row"><td colspan="6">No peers yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function humanize(n) {
+  n = n || 0;
+  const units = ['B','KB','MB','GB','TB'];
+  for (let u of units) { if (n < 1024) return n.toFixed(1)+' '+u; n /= 1024; }
+  return n.toFixed(1)+' PB';
+}
+
+function refreshStats() {
+  fetch('/api/stats').then(r=>r.json()).then(d=>{
+    document.getElementById('st-total').textContent  = d.total;
+    document.getElementById('st-active').textContent = d.active;
+    document.getElementById('st-tx').textContent     = humanize(d.total_tx);
+    document.getElementById('st-rx').textContent     = humanize(d.total_rx);
+  }).catch(()=>{});
+}
+
+function refreshOnline() {
+  fetch('/api/online').then(r=>r.json()).then(d=>{
+    document.getElementById('st-online').textContent    = d.count;
+    document.getElementById('online-badge').textContent = d.count+' online';
+    const tbody = document.getElementById('online-tbody');
+    if (!d.peers.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No users currently online.</td></tr>';
+    } else {
+      tbody.innerHTML = d.peers.map(p=>`
+        <tr>
+          <td class="bright">${p.name}</td>
+          <td><span class="badge badge-blue">${p.interface}</span></td>
+          <td class="mono">${p.address}</td>
+          <td class="muted" style="font-size:11px">${p.last_handshake}</td>
+          <td>${humanize(p.tx)}</td>
+          <td>${humanize(p.rx)}</td>
+        </tr>`).join('');
+    }
+  }).catch(()=>{});
+}
+
+refreshStats();
+refreshOnline();
+setInterval(refreshStats, 15000);
+setInterval(refreshOnline, 15000);
+</script>
+{% endblock %}

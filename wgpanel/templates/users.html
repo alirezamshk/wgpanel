@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Users{% endblock %}
+{% block breadcrumb %}Users{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>Panel Users</h2>
+  <button class="btn btn-primary" onclick="document.getElementById('addModal').classList.add('open')">+ Add User</button>
+</div>
+<div class="panel">
+  <div class="panel-header"><span class="panel-title">Accounts</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Wallet</th><th>Peers</th><th>Created</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+      <tr class="{% if u['disabled'] %}disabled-row{% endif %}">
+        <td><a href="{{ url_for('user_detail', uid=u['id']) }}" class="peer-name">{{ u['username'] }}</a></td>
+        <td class="muted">{{ u['full_name'] or '—' }}</td>
+        <td>{% if u['role']=='admin' %}<span class="badge badge-blue">Admin</span>{% else %}<span class="badge badge-gray">Reseller</span>{% endif %}</td>
+        <td>
+          {% if u['role']=='reseller' %}
+            <span style="{% if u['balance_gb'] < 5 %}color:var(--red){% endif %}">{{ '%.1f'|format(u['balance_gb'] or 0) }} GB</span>
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+        <td>{{ u['peer_count'] }}</td>
+        <td class="muted small">{{ u['created_at'][:10] }}</td>
+        <td>{% if u['disabled'] %}<span class="badge badge-red">Disabled</span>{% else %}<span class="badge badge-green">Active</span>{% endif %}</td>
+        <td class="actions-cell">
+          <a href="{{ url_for('user_detail', uid=u['id']) }}" class="btn-icon">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </a>
+          <form method="post" action="{{ url_for('delete_user', uid=u['id']) }}" style="display:inline">
+            <button type="button" class="btn-icon" style="color:var(--red)" onclick="confirmDelete(this.form,'{{ u['username'] }}')">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}<tr class="empty-row"><td colspan="8">No users yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal" id="addModal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Add New User</h3>
+      <button class="modal-close" onclick="document.getElementById('addModal').classList.remove('open')">✕</button>
+    </div>
+    <form method="post" action="{{ url_for('add_user') }}">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Username *</label><input type="text" name="username" required></div>
+          <div class="form-group"><label>Full Name</label><input type="text" name="full_name"></div>
+          <div class="form-group"><label>Password *</label><input type="password" name="password" required></div>
+          <div class="form-group"><label>Role</label>
+            <select name="role"><option value="reseller">Reseller</option><option value="admin">Admin</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

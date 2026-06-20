@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}{{ peer['comment'] or 'Peer' }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('peers_list') }}" class="back-link">← برگشت</a>
+    <h2>{{ peer['comment'] or 'Peer بی‌نام' }}</h2>
+  </div>
+  <div class="header-actions">
+    <button class="btn {% if peer['disabled'] %}btn-green{% else %}btn-orange{% endif %}"
+            onclick="togglePeer({{ peer['id'] }}, this)">
+      {% if peer['disabled'] %}فعال‌سازی{% else %}غیرفعال{% endif %}
+    </button>
+    <form method="post" action="{{ url_for('reset_traffic', peer_id=peer['id']) }}" style="display:inline">
+      <button type="button" class="btn btn-orange"
+              onclick="if(confirm('ریست ترافیک؟')) this.form.submit()">ریست ترافیک</button>
+    </form>
+    <form method="post" action="{{ url_for('delete_peer', peer_id=peer['id']) }}" style="display:inline">
+      <button type="button" class="btn btn-red"
+              onclick="confirmDelete(this.form, '{{ peer['comment'] }}')">حذف Peer</button>
+    </form>
+  </div>
+</div>
+
+<div class="detail-grid">
+
+  <!-- Info card -->
+  <div class="card">
+    <div class="card-header">اطلاعات</div>
+    <div class="info-list">
+      <div class="info-row"><span>وضعیت</span>
+        {% if peer['disabled'] %}<span class="badge red">غیرفعال</span>
+        {% else %}<span class="badge green">فعال</span>{% endif %}
+      </div>
+      <div class="info-row"><span>اینترفیس</span><span class="badge blue">{{ peer['interface'] }}</span></div>
+      <div class="info-row"><span>آدرس</span><span class="mono">{{ peer['allowed_address'] }}</span></div>
+      <div class="info-row"><span>ساخته شده</span><span>{{ peer['created_at'] }}</span></div>
+      <div class="info-row"><span>آخرین دیده شده</span><span>{{ peer['last_seen'] or '—' }}</span></div>
+      {% if mt_peer %}
+      <div class="info-row"><span>آخرین Handshake</span><span>{{ mt_peer.get('last-handshake','—') }}</span></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Traffic card -->
+  <div class="card">
+    <div class="card-header">ترافیک</div>
+    <div class="info-list">
+      <div class="info-row"><span>TX کل</span><strong>{{ peer['total_tx'] | humanize }}</strong></div>
+      <div class="info-row"><span>RX کل</span><strong>{{ peer['total_rx'] | humanize }}</strong></div>
+      <div class="info-row"><span>مصرف کل</span><strong>{{ (peer['total_tx'] + peer['total_rx']) | humanize }}</strong></div>
+      {% if peer['quota_bytes'] %}
+      <div class="info-row"><span>حجم مجاز</span><strong>{{ peer['quota_bytes'] | humanize }}</strong></div>
+      <div class="quota-wrap">
+        <div class="quota-bar">
+          <div class="quota-fill {% if peer|quota_pct >= 90 %}red{% elif peer|quota_pct >= 70 %}orange{% endif %}"
+               style="width:{{ peer|quota_pct }}%"></div>
+        </div>
+        <span class="quota-text">{{ peer|quota_pct }}% استفاده شده</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Keys card -->
+  <div class="card card-full">
+    <div class="card-header">کلیدها</div>
+    <div class="info-list">
+      <div class="info-row col">
+        <span>Public Key</span>
+        <span class="mono small selectable">{{ peer['public_key'] }}</span>
+      </div>
+      {% if peer['private_key'] %}
+      <div class="info-row col">
+        <span>Private Key (client)</span>
+        <span class="mono small selectable">{{ peer['private_key'] }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Settings form -->
+  <div class="card card-full">
+    <div class="card-header">تنظیمات</div>
+    <form method="post" action="{{ url_for('update_peer', peer_id=peer['id']) }}">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>نام / Comment</label>
+          <input type="text" name="comment" value="{{ peer['comment'] or '' }}">
+        </div>
+        <div class="form-group">
+          <label>حجم مجاز (GB) — 0 = نامحدود</label>
+          <input type="number" name="quota_gb" step="0.1" min="0"
+                 value="{{ '%.2f' % (peer['quota_bytes'] / 1073741824) if peer['quota_bytes'] else 0 }}">
+        </div>
+        <div class="form-group">
+          <label>تاریخ انقضا</label>
+          <input type="date" name="expiry_date" value="{{ peer['expiry_date'] or '' }}">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">ذخیره تنظیمات</button>
+    </form>
+  </div>
+
+  <!-- Traffic chart -->
+  <div class="card card-full">
+    <div class="card-header">نمودار مصرف (آخرین ۴۸ نقطه)</div>
+    <canvas id="trafficChart" height="80"></canvas>
+  </div>
+
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+function togglePeer(id, btn) {
+  fetch('/peers/' + id + '/toggle', {method:'POST'})
+    .then(r => r.json()).then(data => { if(!data.error) location.reload(); });
+}
+
+fetch('/api/peers/{{ peer.id }}/history')
+  .then(r => r.json())
+  .then(data => {
+    data.reverse();
+    const labels = data.map(d => d.recorded_at.slice(11,16));
+    const tx = data.map(d => (d.tx_delta / 1048576).toFixed(2));
+    const rx = data.map(d => (d.rx_delta / 1048576).toFixed(2));
+
+    new Chart(document.getElementById('trafficChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'TX (MB)', data: tx, backgroundColor: '#0097d4aa' },
+          { label: 'RX (MB)', data: rx, backgroundColor: '#7c5cbfaa' }
+        ]
+      },
+      options: {
+        plugins: { legend: { labels: { color: '#ccc' } } },
+        scales: {
+          x: { ticks: { color: '#888' }, grid: { color: '#333' } },
+          y: { ticks: { color: '#888' }, grid: { color: '#333' } }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

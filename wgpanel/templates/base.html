@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}WireGuard Panel{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% if session.logged_in %}
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint=='dashboard' %}active{% endif %}" title="Dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </a>
+    <a href="{{ url_for('peers_list') }}" class="nav-item {% if request.endpoint in ['peers_list','peer_detail'] %}active{% endif %}" title="Peers">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+    </a>
+    <a href="{{ url_for('interfaces') }}" class="nav-item {% if request.endpoint=='interfaces' %}active{% endif %}" title="Interfaces">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M15 6l6 6-6 6"/></svg>
+    </a>
+    {% if session.role == 'admin' %}
+    <a href="{{ url_for('users_list') }}" class="nav-item {% if request.endpoint in ['users_list','user_detail'] %}active{% endif %}" title="Users">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87"/></svg>
+    </a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="sidebar-sep"></div>
+    <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint=='settings' %}active{% endif %}" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </a>
+    <a href="{{ url_for('logout') }}" class="nav-item nav-logout" title="Logout">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </a>
+    <div class="sidebar-version">v1.0.1</div>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <header class="topbar">
+    <div class="breadcrumb">
+      WireGuard Panel <span class="bc-sep">›</span>
+      <span class="bc-current">{% block breadcrumb %}{% endblock %}</span>
+    </div>
+    <div class="topbar-right">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="toast toast-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      <span class="status-pill">● Connected</span>
+      <span class="topbar-credit">Design &amp; Developed by <strong>Alireza.Msh</strong></span>
+    </div>
+  </header>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{% else %}
+<main class="content">
+  {% block content_unauth %}{% endblock %}
+</main>
+{% endif %}
+
+<script>
+function confirmDelete(form, name) {
+  if (confirm('Delete "' + name + '"? This action cannot be undone.')) form.submit();
+}
+setTimeout(() => document.querySelectorAll('.toast').forEach(t => t.style.opacity='0'), 3000);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

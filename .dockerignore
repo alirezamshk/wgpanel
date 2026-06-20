@@ -1,0 +1,11 @@
+*.db
+*.db-wal
+data/
+__pycache__/
+*.pyc
+.env
+.git/
+.github/
+*.md
+.gitignore
+*.tar.gz

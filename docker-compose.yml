@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  wgpanel:
+    image: alirezamsh/wgpanel:latest
+    # build: .        # uncomment to build locally instead of pulling
+    container_name: wgpanel
+    restart: always
+    ports:
+      - "5050:5050"
+    volumes:
+      - wgpanel_data:/data
+    environment:
+      - TZ=Asia/Tehran
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5050/login"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  wgpanel_data:
+    driver: local

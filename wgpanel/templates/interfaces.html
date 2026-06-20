@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Interfaces{% endblock %}
+{% block breadcrumb %}Interfaces{% endblock %}
+{% block content %}
+
+<div class="page-header"><h2>WireGuard Interfaces</h2></div>
+
+<div class="panel">
+  <div class="panel-header"><span class="panel-title">Interfaces</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Public Key</th><th>Listen Port</th><th>MTU</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for iface in interfaces %}
+        <tr>
+          <td class="bright">{{ iface.get('name') }}</td>
+          <td class="mono selectable">{{ iface.get('public-key','') }}</td>
+          <td>{{ iface.get('listen-port','') }}</td>
+          <td>{{ iface.get('mtu','auto') }}</td>
+          <td>{% if iface.get('running')=='true' %}<span class="badge badge-green">Running</span>{% else %}<span class="badge badge-red">Stopped</span>{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr class="empty-row"><td colspan="5">No WireGuard interfaces found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

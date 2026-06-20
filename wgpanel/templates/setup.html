@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WireGuard Panel — Setup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#141416;color:#c9c9cf;min-height:100vh;
+     display:flex;align-items:center;justify-content:center;padding:20px}
+.wizard{width:620px;max-width:100%}
+.wizard-header{text-align:center;margin-bottom:28px}
+.wizard-logo{width:52px;height:52px;background:#0097d4;border-radius:12px;
+             display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.wizard-logo svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8}
+h1{font-size:20px;color:#e4e4e8;margin-bottom:4px}
+.wizard-header p{font-size:12px;color:#555}
+.version{display:inline-block;background:#0097d420;color:#0097d4;
+         padding:2px 10px;border-radius:20px;font-size:11px;margin-top:6px}
+.steps{display:flex;align-items:center;justify-content:center;margin-bottom:24px}
+.step{display:flex;align-items:center;gap:6px}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+          justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.step-num.done{background:#22c55e;color:#fff}
+.step-num.active{background:#0097d4;color:#fff}
+.step-num.pending{background:#252530;color:#555}
+.step-label{font-size:11px}
+.step-label.active{color:#e4e4e8}
+.step-label.done{color:#22c55e}
+.step-label.pending{color:#555}
+.step-line{width:36px;height:1px;background:#2a2a30;margin:0 4px}
+.progress-bar{height:3px;background:#252530;border-radius:2px;margin-bottom:20px;overflow:hidden}
+.progress-fill{height:100%;background:#0097d4;border-radius:2px;transition:width .3s}
+.card{background:#1a1a1f;border:1px solid #2a2a30;border-radius:8px;overflow:hidden}
+.card-header{padding:12px 18px;background:#1e1e24;border-bottom:1px solid #2a2a30}
+.card-header h2{font-size:14px;font-weight:600;color:#e4e4e8}
+.card-header p{font-size:11px;color:#555;margin-top:2px}
+.card-body{padding:18px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+label{font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.04em}
+input,select{background:#0e0e10;border:1px solid #2a2a30;color:#c9c9cf;
+             padding:8px 10px;border-radius:6px;font-size:13px;width:100%}
+input:focus,select:focus{outline:none;border-color:#0097d4}
+.hint{font-size:11px;color:#444;margin-top:2px}
+.req{color:#ef4444}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:6px;
+     border:1px solid #2a2a30;background:#252530;color:#c9c9cf;cursor:pointer;
+     font-size:12px;transition:.15s}
+.btn:hover{background:#1e1e24}
+.btn-primary{background:#0097d4;border-color:#0097d4;color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-success{background:#22c55e;border-color:#22c55e;color:#fff}
+.actions{display:flex;justify-content:space-between;align-items:center;
+         padding:12px 18px;border-top:1px solid #2a2a30}
+.alert{padding:9px 13px;border-radius:6px;font-size:12px;margin-bottom:12px}
+.alert-error{background:#ef444418;border:1px solid #ef444435;color:#ef4444}
+.alert-info{background:#0097d415;border:1px solid #0097d430;color:#0097d4}
+.test-result{padding:7px 11px;border-radius:6px;font-size:12px;margin-top:8px;display:none}
+.test-ok{background:#22c55e18;border:1px solid #22c55e35;color:#22c55e;display:block}
+.test-fail{background:#ef444418;border:1px solid #ef444435;color:#ef4444;display:block}
+.info-box{background:#0097d410;border:1px solid #0097d425;border-radius:6px;
+          padding:9px 12px;font-size:12px;color:#0097d4;margin-bottom:12px}
+.pass-bar{height:3px;background:#252530;border-radius:2px;margin-top:4px;overflow:hidden}
+.pass-fill{height:100%;border-radius:2px;transition:width .3s,background .3s}
+.review-table td{padding:9px 0;border-bottom:1px solid #1e1e24;font-size:13px}
+.review-table td:first-child{color:#555;width:160px}
+.review-table td:last-child{color:#e4e4e8;font-family:monospace}
+#loadingOverlay{position:fixed;inset:0;background:#141416ee;display:none;
+                align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:100}
+.spinner{width:38px;height:38px;border:3px solid #252530;border-top-color:#0097d4;
+         border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+code{background:#0e0e10;padding:1px 6px;border-radius:3px;font-size:11px}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:#888">Setting up your panel...</div>
+</div>
+
+<div class="wizard">
+  <div class="wizard-header">
+    <div class="wizard-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <h1>WireGuard Panel Setup</h1>
+    <p>First-time configuration wizard</p>
+    <span class="version">v1.1.1</span>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num {% if step > 1 %}done{% elif step == 1 %}active{% else %}pending{% endif %}">
+        {% if step > 1 %}✓{% else %}1{% endif %}
+      </div>
+      <span class="step-label {% if step > 1 %}done{% elif step == 1 %}active{% else %}pending{% endif %}">MikroTik</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-num {% if step > 2 %}done{% elif step == 2 %}active{% else %}pending{% endif %}">
+        {% if step > 2 %}✓{% else %}2{% endif %}
+      </div>
+      <span class="step-label {% if step > 2 %}done{% elif step == 2 %}active{% else %}pending{% endif %}">WireGuard</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-num {% if step > 3 %}done{% elif step == 3 %}active{% else %}pending{% endif %}">
+        {% if step > 3 %}✓{% else %}3{% endif %}
+      </div>
+      <span class="step-label {% if step > 3 %}done{% elif step == 3 %}active{% else %}pending{% endif %}">Admin</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-num {% if step == 4 %}active{% else %}pending{% endif %}">4</div>
+      <span class="step-label {% if step == 4 %}active{% else %}pending{% endif %}">Confirm</span>
+    </div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" style="width:{{ step * 25 }}%"></div>
+  </div>
+
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" id="wForm">
+    <input type="hidden" name="current_step" value="{{ step }}">
+    <input type="hidden" name="mt_host"    value="{{ data.mt_host or '' }}">
+    <input type="hidden" name="mt_port"    value="{{ data.mt_port or '8728' }}">
+    <input type="hidden" name="mt_user"    value="{{ data.mt_user or 'admin' }}">
+    <input type="hidden" name="mt_pass"    value="{{ data.mt_pass or '' }}">
+    <input type="hidden" name="endpoint"   value="{{ data.endpoint or '' }}">
+    <input type="hidden" name="dns"        value="{{ data.dns or '8.8.8.8' }}">
+    <input type="hidden" name="admin_user" value="{{ data.admin_user or 'admin' }}">
+    <input type="hidden" name="admin_pass" value="{{ data.admin_pass or '' }}">
+    <input type="hidden" name="timezone"   value="{{ data.timezone or 'Asia/Tehran' }}">
+
+    {% if step == 1 %}
+    <div class="card">
+      <div class="card-header">
+        <h2>MikroTik Connection</h2>
+        <p>Enter your MikroTik router API credentials</p>
+      </div>
+      <div class="card-body">
+        <div class="info-box">
+          Enable API on MikroTik first: <code>/ip service enable api</code>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Host / IP <span class="req">*</span></label>
+            <input type="text" id="f_mt_host" placeholder="192.168.1.1" value="{{ data.mt_host or '' }}" required>
+          </div>
+          <div class="form-group">
+            <label>API Port</label>
+            <input type="number" id="f_mt_port" value="{{ data.mt_port or '8728' }}" placeholder="8728">
+            <span class="hint">8728 plain / 8729 SSL</span>
+          </div>
+          <div class="form-group">
+            <label>Username <span class="req">*</span></label>
+            <input type="text" id="f_mt_user" value="{{ data.mt_user or 'admin' }}" required>
+          </div>
+          <div class="form-group">
+            <label>Password <span class="req">*</span></label>
+            <input type="password" id="f_mt_pass" value="{{ data.mt_pass or '' }}" required>
+          </div>
+          <div class="form-group full">
+            <label>Timezone</label>
+            <select id="f_tz">
+              <option value="Asia/Tehran" {% if not data.timezone or data.timezone=='Asia/Tehran' %}selected{% endif %}>Asia/Tehran (Iran)</option>
+              <option value="UTC" {% if data.timezone=='UTC' %}selected{% endif %}>UTC</option>
+              <option value="Europe/Istanbul" {% if data.timezone=='Europe/Istanbul' %}selected{% endif %}>Europe/Istanbul</option>
+              <option value="Asia/Dubai" {% if data.timezone=='Asia/Dubai' %}selected{% endif %}>Asia/Dubai</option>
+              <option value="Europe/London" {% if data.timezone=='Europe/London' %}selected{% endif %}>Europe/London</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <button type="button" class="btn" onclick="testConn()">⚡ Test Connection</button>
+          <div id="testRes" class="test-result"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <span style="font-size:11px;color:#444">Step 1 of 4</span>
+        <button type="button" class="btn btn-primary" onclick="goNext(1)">Next →</button>
+      </div>
+    </div>
+
+    {% elif step == 2 %}
+    <div class="card">
+      <div class="card-header">
+        <h2>WireGuard Settings</h2>
+        <p>Public endpoint used in client config files</p>
+      </div>
+      <div class="card-body">
+        <div class="info-box">
+          This is the public IP and port clients will connect to. Each interface's port is auto-detected.
+        </div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Server Public Endpoint <span class="req">*</span></label>
+            <input type="text" id="f_endpoint" value="{{ data.endpoint or '' }}" placeholder="1.2.3.4:51820" required>
+            <span class="hint">Format: PUBLIC_IP:PORT</span>
+          </div>
+          <div class="form-group full">
+            <label>Client DNS</label>
+            <input type="text" id="f_dns" value="{{ data.dns or '8.8.8.8' }}" placeholder="8.8.8.8">
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" onclick="goBack()">← Back</button>
+        <button type="button" class="btn btn-primary" onclick="goNext(2)">Next →</button>
+      </div>
+    </div>
+
+    {% elif step == 3 %}
+    <div class="card">
+      <div class="card-header">
+        <h2>Admin Account</h2>
+        <p>Create your panel administrator credentials</p>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Admin Username <span class="req">*</span></label>
+            <input type="text" id="f_admin_user" value="{{ data.admin_user or 'admin' }}" required>
+          </div>
+          <div class="form-group full">
+            <label>Admin Password <span class="req">*</span></label>
+            <input type="password" id="f_admin_pass" placeholder="Min 6 characters"
+                   oninput="checkStrength(this.value)" required>
+            <div class="pass-bar"><div class="pass-fill" id="pFill" style="width:0"></div></div>
+            <span class="hint" id="pHint">Enter a password</span>
+          </div>
+          <div class="form-group full">
+            <label>Confirm Password <span class="req">*</span></label>
+            <input type="password" id="f_admin_pass2" placeholder="Repeat password" required>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" onclick="goBack()">← Back</button>
+        <button type="button" class="btn btn-primary" onclick="goNext(3)">Next →</button>
+      </div>
+    </div>
+
+    {% elif step == 4 %}
+    <div class="card">
+      <div class="card-header">
+        <h2>Review & Confirm</h2>
+        <p>Verify your settings before launching</p>
+      </div>
+      <div class="card-body">
+        <table class="review-table" style="width:100%;border-collapse:collapse">
+          <tr><td>MikroTik Host</td><td>{{ data.mt_host }}:{{ data.mt_port or '8728' }}</td></tr>
+          <tr><td>MikroTik User</td><td>{{ data.mt_user }}</td></tr>
+          <tr><td>WG Endpoint</td><td>{{ data.endpoint }}</td></tr>
+          <tr><td>Client DNS</td><td>{{ data.dns }}</td></tr>
+          <tr><td>Timezone</td><td>{{ data.timezone }}</td></tr>
+          <tr><td>Admin Username</td><td>{{ data.admin_user }}</td></tr>
+          <tr><td>Admin Password</td><td style="color:#22c55e">✓ Set</td></tr>
+        </table>
+        <div class="alert alert-info" style="margin-top:14px">
+          All settings can be changed later from the Settings page.
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" onclick="goBack()">← Back</button>
+        <button type="submit" name="action" value="finish" class="btn btn-success"
+                onclick="document.getElementById('loadingOverlay').style.display='flex'">
+          ✓ Finish & Launch Panel
+        </button>
+      </div>
+    </div>
+    {% endif %}
+
+  </form>
+</div>
+
+<script>
+function syncHidden(id, name) {
+  const el = document.getElementById(id);
+  if (el) document.querySelector(`input[name="${name}"]`).value = el.value;
+}
+
+function goNext(step) {
+  if (step === 1) {
+    const host = document.getElementById('f_mt_host').value.trim();
+    const pass = document.getElementById('f_mt_pass').value;
+    if (!host || !pass) { alert('Host and password are required.'); return; }
+    syncHidden('f_mt_host','mt_host');
+    syncHidden('f_mt_port','mt_port');
+    syncHidden('f_mt_user','mt_user');
+    syncHidden('f_mt_pass','mt_pass');
+    syncHidden('f_tz','timezone');
+  } else if (step === 2) {
+    const ep = document.getElementById('f_endpoint').value.trim();
+    if (!ep) { alert('Server endpoint is required.'); return; }
+    syncHidden('f_endpoint','endpoint');
+    syncHidden('f_dns','dns');
+  } else if (step === 3) {
+    const p1 = document.getElementById('f_admin_pass').value;
+    const p2 = document.getElementById('f_admin_pass2').value;
+    if (!document.getElementById('f_admin_user').value) { alert('Username required.'); return; }
+    if (p1.length < 6) { alert('Password must be at least 6 characters.'); return; }
+    if (p1 !== p2) { alert('Passwords do not match.'); return; }
+    syncHidden('f_admin_user','admin_user');
+    document.querySelector('input[name="admin_pass"]').value = p1;
+  }
+
+  const form = document.getElementById('wForm');
+  const btn  = document.createElement('input');
+  btn.type = 'hidden'; btn.name = 'action'; btn.value = 'next';
+  form.appendChild(btn);
+  form.submit();
+}
+
+function goBack() {
+  const form = document.getElementById('wForm');
+  const btn  = document.createElement('input');
+  btn.type = 'hidden'; btn.name = 'action'; btn.value = 'back';
+  form.appendChild(btn);
+  form.submit();
+}
+
+function testConn() {
+  const host = document.getElementById('f_mt_host').value.trim();
+  const port = document.getElementById('f_mt_port').value || '8728';
+  const user = document.getElementById('f_mt_user').value;
+  const pass = document.getElementById('f_mt_pass').value;
+  const res  = document.getElementById('testRes');
+  if (!host || !pass) { res.className='test-result test-fail'; res.textContent='Fill host and password first.'; return; }
+  res.className = 'test-result'; res.style.display='block';
+  res.style.cssText='display:block;padding:7px 11px;border-radius:6px;font-size:12px;background:#252530;color:#888';
+  res.textContent = 'Testing...';
+  fetch('/wizard/test', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({host,port,user,pass})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      res.className='test-result test-ok';
+      res.textContent='✓ Connected! Found '+d.interfaces+' WireGuard interface(s).';
+    } else {
+      res.className='test-result test-fail';
+      res.textContent='✗ '+d.error;
+    }
+  }).catch(()=>{res.className='test-result test-fail';res.textContent='✗ Network error';});
+}
+
+function checkStrength(p) {
+  let s=0;
+  if(p.length>=6)s++; if(p.length>=10)s++; if(/[A-Z]/.test(p))s++;
+  if(/[0-9]/.test(p))s++; if(/[^A-Za-z0-9]/.test(p))s++;
+  const c=['#ef4444','#f59e0b','#f59e0b','#22c55e','#22c55e','#22c55e'];
+  const l=['Too short','Weak','Fair','Good','Strong','Very strong'];
+  document.getElementById('pFill').style.cssText=`width:${s/5*100}%;background:${c[s]}`;
+  const h=document.getElementById('pHint');
+  h.textContent=l[s]; h.style.color=c[s];
+}
+</script>
+</body>
+</html>

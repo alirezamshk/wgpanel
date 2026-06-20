@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% block title %}Peers{% endblock %}
+{% block breadcrumb %}Peers{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h2>Peers
+    {% if wallet_balance is not none %}
+    <span class="badge badge-blue" style="font-size:12px;margin-right:8px">
+      Wallet: {{ '%.1f'|format(wallet_balance) }} GB
+    </span>
+    {% endif %}
+  </h2>
+  <button class="btn btn-primary" onclick="document.getElementById('addModal').classList.add('open')">+ Add Peer</button>
+</div>
+
+<div class="panel">
+  <div class="panel-header"><span class="panel-title">All Peers ({{ peers|length }})</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Interface</th><th>Address</th>
+          <th>TX</th><th>RX</th><th>Quota</th><th>Expires</th>
+          {% if session.role == 'admin' %}<th>Owner</th>{% endif %}
+          <th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for p in peers %}
+      {% set pct = p | quota_pct %}
+      <tr class="{% if p['disabled'] %}disabled-row{% endif %}">
+        <td><a href="{{ url_for('peer_detail', peer_id=p['id']) }}" class="peer-name">{{ p['comment'] or '—' }}</a></td>
+        <td><span class="badge badge-blue">{{ p['interface'] }}</span></td>
+        <td class="mono">{{ p['allowed_address'] }}</td>
+        <td>{{ p['total_tx'] | humanize }}</td>
+        <td>{{ p['total_rx'] | humanize }}</td>
+        <td>
+          {% if p['quota_bytes'] %}
+            <div class="quota-wrap">
+              <div class="quota-bar"><div class="quota-fill {% if pct>=90 %}danger{% elif pct>=70 %}warn{% endif %}" style="width:{{ pct }}%"></div></div>
+              <span class="quota-text">{{ pct }}% of {{ p['quota_bytes'] | humanize }}</span>
+            </div>
+          {% else %}<span class="muted">Unlimited</span>{% endif %}
+        </td>
+        <td>
+          {% if p['expiry_date'] %}
+            {% if p['expiry_date'] < today %}<span class="badge badge-red">Expired</span>
+            {% else %}<span class="muted">{{ p['expiry_date'] }}</span>{% endif %}
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+        {% if session.role == 'admin' %}
+        <td>
+          {% if p['owner_id'] %}
+            <a href="{{ url_for('user_detail', uid=p['owner_id']) }}"
+               class="badge badge-gray" style="text-decoration:none">
+              {{ p['owner_name'] }}
+            </a>
+          {% else %}
+            <span class="muted">Admin</span>
+          {% endif %}
+        </td>
+        {% endif %}
+        <td>{% if p['disabled'] %}<span class="badge badge-red">Disabled</span>{% else %}<span class="badge badge-green">Active</span>{% endif %}</td>
+        <td>
+          <div class="actions-cell">
+            <a href="{{ url_for('download_config', peer_id=p['id']) }}" class="btn-icon" title="Download config">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </a>
+            <button class="btn-icon" onclick="showQR({{ p['id'] }})" title="QR Code">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><path d="M21 16h-3v3m0-6h.01M15 21v-3m6 0v.01M15 15h3"/></svg>
+            </button>
+            <button class="btn-icon" onclick="openEdit({{ p['id'] }},'{{ p['comment'] or '' }}','{{ p['allowed_address'] }}',{{ p['quota_bytes'] or 0 }},'{{ p['expiry_date'] or '' }}')" title="Edit">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon" onclick="togglePeer({{ p['id'] }}, this)" title="Toggle">
+              <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+            </button>
+            <form method="post" action="{{ url_for('delete_peer', peer_id=p['id']) }}" style="display:inline">
+              <button type="button" class="btn-icon" style="color:var(--red)"
+                      onclick="confirmDelete(this.form,'{{ p['comment'] or p['allowed_address'] }}')">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr class="empty-row"><td colspan="{% if session.role=='admin' %}10{% else %}9{% endif %}">No peers yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="modal" id="qrModal">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header"><h3>Config QR Code</h3>
+      <button class="modal-close" onclick="document.getElementById('qrModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <img id="qrImg" src="" style="width:100%;max-width:380px;background:#fff;padding:10px;border-radius:6px;display:block;margin:0 auto;image-rendering:pixelated">
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
+        <button class="btn" onclick="copyConfig()">Copy Config</button>
+        <button class="btn" onclick="document.getElementById('qrModal').classList.remove('open')">Close</button>
+      </div>
+      <pre id="configText" style="display:none"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal" id="editModal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Edit Peer</h3>
+      <button class="modal-close" onclick="document.getElementById('editModal').classList.remove('open')">✕</button>
+    </div>
+    <form method="post" id="editForm">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Name / Comment</label><input type="text" name="comment" id="edit-comment"></div>
+          <div class="form-group"><label>Address</label><input type="text" id="edit-addr" disabled style="opacity:.5"></div>
+          <div class="form-group"><label>Quota (GB) — 0 = Unlimited</label><input type="number" name="quota_gb" id="edit-quota" step="0.1" min="0"></div>
+          <div class="form-group"><label>Expiry Date</label><input type="date" name="expiry_date" id="edit-expiry"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="document.getElementById('editModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal" id="addModal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Add New Peer</h3>
+      <button class="modal-close" onclick="document.getElementById('addModal').classList.remove('open')">✕</button>
+    </div>
+    <form method="post" action="{{ url_for('add_peer') }}">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Name / Comment</label><input type="text" name="comment" placeholder="Ali - Mobile"></div>
+          <div class="form-group"><label>Interface *</label>
+            <select name="interface" required>
+              {% for iface in interfaces %}<option value="{{ iface.get('name') }}">{{ iface.get('name') }}</option>{% endfor %}
+            </select>
+          </div>
+          {% if session.role == 'admin' %}
+          <!-- Admin: IP Pool dropdown -->
+          <div class="form-group"><label>IP Pool</label>
+            <select id="poolSelect" onchange="fetchNextIP()">
+              <option value="">— Manual —</option>
+              {% for pool in pools %}<option value="{{ pool.get('name') }}">{{ pool.get('name') }} ({{ pool.get('ranges','') }})</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group"><label>Allowed Address *</label>
+            <input type="text" name="allowed_address" id="allowedAddr" placeholder="10.0.0.2/32" required>
+            <span id="ipHint" class="form-hint"></span>
+          </div>
+          {% else %}
+          <!-- Reseller: IP از range مجاز -->
+          <div class="form-group">
+            <label>Allowed Address *</label>
+            <select name="allowed_address" id="allowedAddrSelect" required
+                    style="font-family:monospace">
+              <option value="">— Select interface first —</option>
+            </select>
+            <span id="ipHint" class="form-hint"></span>
+          </div>
+          {% endif %}
+          <div class="form-group"><label>Public Key (blank = auto)</label><input type="text" name="public_key" placeholder="base64..."></div>
+          <div class="form-group"><label>Preshared Key</label><input type="text" name="preshared_key"></div>
+          <div class="form-group"><label>Keepalive (sec)</label><input type="number" name="keepalive" placeholder="25"></div>
+          <div class="form-group"><label>Quota (GB){% if session.role != 'admin' %} *{% endif %}</label>
+            <input type="number" name="quota_gb" step="0.1" min="0" value="0">
+            {% if session.role != 'admin' %}<span class="form-hint">Required for resellers — deducted from wallet</span>{% endif %}
+          </div>
+          <div class="form-group"><label>Expiry Date</label><input type="date" name="expiry_date"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Peer</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function togglePeer(id, btn) {
+  fetch('/peers/'+id+'/toggle',{method:'POST'}).then(r=>r.json()).then(d=>{if(!d.error)location.reload();else alert(d.error);});
+}
+
+// Admin: از IP pool
+function fetchNextIP() {
+  const poolEl = document.getElementById('poolSelect');
+  if (!poolEl) return;
+  const pool = poolEl.value;
+  const addr = document.getElementById('allowedAddr');
+  const hint = document.getElementById('ipHint');
+  if(!pool){addr.value='';hint.textContent='';return;}
+  hint.textContent='Searching...';
+  fetch('/api/pool/next-ip?pool='+encodeURIComponent(pool)).then(r=>r.json()).then(d=>{
+    if(d.ip){addr.value=d.ip;hint.textContent='First available IP from pool';}
+    else hint.textContent='No free IPs in pool.';
+  });
+}
+
+// Reseller: بارگذاری IPs آزاد از range مجاز
+function loadAvailableIPs() {
+  const ifaceEl = document.querySelector('select[name="interface"]');
+  const addrSel = document.getElementById('allowedAddrSelect');
+  const hint    = document.getElementById('ipHint');
+  if (!ifaceEl || !addrSel) return;
+
+  const iface = ifaceEl.value;
+  if (!iface) return;
+
+  addrSel.innerHTML = '<option value="">Loading...</option>';
+  hint.textContent = '';
+
+  fetch('/api/reseller/available-ips?interface=' + encodeURIComponent(iface))
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) {
+        addrSel.innerHTML = '<option value="">— ' + d.error + ' —</option>';
+        return;
+      }
+      if (!d.ips.length) {
+        addrSel.innerHTML = '<option value="">— No free IPs available —</option>';
+        return;
+      }
+      addrSel.innerHTML = d.ips.map(ip =>
+        `<option value="${ip}">${ip}</option>`
+      ).join('');
+      hint.textContent = d.total_free + ' IPs available in your range';
+    })
+    .catch(() => {
+      addrSel.innerHTML = '<option value="">— Error loading IPs —</option>';
+    });
+}
+
+// وقتی interface عوض میشه، IPs رو reload کن (فقط برای reseller)
+document.addEventListener('DOMContentLoaded', function() {
+  const ifaceEl = document.querySelector('#addModal select[name="interface"]');
+  if (ifaceEl && document.getElementById('allowedAddrSelect')) {
+    ifaceEl.addEventListener('change', loadAvailableIPs);
+    // بارگذاری اولیه
+    if (ifaceEl.value) loadAvailableIPs();
+  }
+});
+function showQR(id) {
+  document.getElementById('qrImg').src='';
+  document.getElementById('qrModal').classList.add('open');
+  fetch('/peers/'+id+'/qr').then(r=>r.json()).then(d=>{
+    document.getElementById('qrImg').src='data:image/png;base64,'+d.qr;
+    document.getElementById('configText').textContent=d.config;
+  });
+}
+function copyConfig() {
+  navigator.clipboard.writeText(document.getElementById('configText').textContent).then(()=>alert('Copied!'));
+}
+function openEdit(id, comment, addr, quotaBytes, expiry) {
+  document.getElementById('editForm').action='/peers/'+id+'/update';
+  document.getElementById('edit-comment').value=comment;
+  document.getElementById('edit-addr').value=addr;
+  document.getElementById('edit-quota').value=quotaBytes?(quotaBytes/1073741824).toFixed(2):0;
+  document.getElementById('edit-expiry').value=expiry;
+  document.getElementById('editModal').classList.add('open');
+}
+</script>
+{% endblock %}

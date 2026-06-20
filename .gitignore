@@ -1,0 +1,13 @@
+*.db
+*.db-wal
+*.db-shm
+/data/
+__pycache__/
+*.pyc
+.env
+.env.local
+venv/
+.venv/
+.DS_Store
+*.log
+*.tar.gz

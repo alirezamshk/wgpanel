@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}{{ user['username'] }}{% endblock %}
+{% block breadcrumb %}Users › {{ user['username'] }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('users_list') }}" class="back-link">← Users</a>
+    <h2>{{ user['full_name'] or user['username'] }}
+      {% if user['role']=='admin' %}<span class="badge badge-blue">Admin</span>
+      {% else %}<span class="badge badge-gray">Reseller</span>{% endif %}
+    </h2>
+  </div>
+  <form method="post" action="{{ url_for('delete_user', uid=user['id']) }}">
+    <button type="button" class="btn btn-danger"
+            onclick="confirmDelete(this.form,'{{ user['username'] }}')">Delete User</button>
+  </form>
+</div>
+
+<div class="detail-grid">
+  <div class="card">
+    <div class="card-header">Account Settings</div>
+    <form method="post" action="{{ url_for('update_user', uid=user['id']) }}">
+      <div class="info-list">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="full_name" value="{{ user['full_name'] or '' }}">
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" name="new_password" placeholder="Leave blank to keep">
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;padding:4px 0 12px">
+          <input type="checkbox" name="disabled" {% if user['disabled'] %}checked{% endif %}>
+          <span style="font-size:13px">Account Disabled</span>
+        </label>
+
+        {% if user['role'] == 'reseller' %}
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;
+                    letter-spacing:.05em;margin-bottom:10px;border-top:1px solid var(--border);padding-top:14px">
+          Interface & Pool Permissions
+        </div>
+
+        {% for iface in interfaces %}
+        {% set perm = namespace(found=none) %}
+        {% for p in perms %}
+          {% if p['interface'] == iface.get('name') %}{% set perm.found = p %}{% endif %}
+        {% endfor %}
+
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+          <!-- Interface toggle -->
+          <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">
+            <input type="checkbox" name="interfaces" value="{{ iface.get('name') }}"
+                   id="iface_{{ iface.get('name') }}"
+                   onchange="toggleIface('{{ iface.get('name') }}')"
+                   {% if perm.found %}checked{% endif %}>
+            <span style="font-weight:600;color:var(--bright)">{{ iface.get('name') }}</span>
+            <span class="badge badge-blue" style="font-size:10px">UDP :{{ iface.get('listen-port') }}</span>
+            {% if perm.found %}<span class="badge badge-green" style="font-size:10px">Allowed</span>{% endif %}
+          </label>
+
+          <div id="iface_opts_{{ iface.get('name') }}"
+               style="{% if not perm.found %}display:none;{% endif %}padding-right:8px">
+
+            <!-- IP Range -->
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px">IP Range (leave blank = no restriction)</div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+              <div class="form-group">
+                <label>Range Start</label>
+                <input type="text" name="ip_start_{{ iface.get('name') }}"
+                       value="{{ perm.found['ip_range_start'] if perm.found else '' }}"
+                       placeholder="10.0.0.2">
+              </div>
+              <div class="form-group">
+                <label>Range End</label>
+                <input type="text" name="ip_end_{{ iface.get('name') }}"
+                       value="{{ perm.found['ip_range_end'] if perm.found else '' }}"
+                       placeholder="10.0.0.100">
+              </div>
+            </div>
+
+            <!-- IP Pools for this interface -->
+            {% if pools %}
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Allowed IP Pools</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              {% for pool in pools %}
+              <label style="display:flex;align-items:center;gap:5px;background:var(--bg4);
+                            padding:4px 10px;border-radius:20px;cursor:pointer;font-size:12px">
+                <input type="checkbox"
+                       name="pool_{{ iface.get('name') }}"
+                       value="{{ pool.get('name') }}"
+                       {% if perm.found and perm.found['allowed_pool'] and pool.get('name') in perm.found['allowed_pool'] %}checked{% endif %}>
+                {{ pool.get('name') }}
+                <span class="muted" style="font-size:10px">({{ pool.get('ranges','') }})</span>
+              </label>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary" style="margin-top:8px">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  {% if user['role'] == 'reseller' %}
+  <div class="card">
+    <div class="card-header">Data Wallet</div>
+    <div class="info-list">
+      <div style="text-align:center;padding:16px 0">
+        <div style="font-size:44px;font-weight:700;color:var(--accent)">{{ '%.1f'|format(balance) }}</div>
+        <div class="muted" style="margin-top:4px">GB Available</div>
+      </div>
+      <form method="post" action="{{ url_for('charge_wallet', uid=user['id']) }}">
+        <div class="form-group" style="margin-bottom:8px">
+          <label>Amount (GB)</label>
+          <input type="number" name="amount_gb" step="0.5" min="0.5" placeholder="10" required>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>Note</label>
+          <input type="text" name="note" placeholder="Monthly recharge">
+        </div>
+        <button type="submit" class="btn btn-success" style="width:100%;justify-content:center">
+          + Charge Wallet
+        </button>
+      </form>
+    </div>
+
+    <div class="card-header">Transaction History</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th></tr></thead>
+        <tbody>
+        {% for t in txns %}
+        <tr>
+          <td class="small muted">{{ t['created_at'][:16] }}</td>
+          <td>{% if t['type']=='charge' %}
+            <span class="badge badge-green">+ Charge</span>
+          {% else %}
+            <span class="badge badge-orange">− Deduct</span>
+          {% endif %}</td>
+          <td>{{ '%.1f'|format(t['amount_gb']) }} GB</td>
+          <td class="muted small">{{ t['note'] or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr class="empty-row"><td colspan="4">No transactions.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card card-full">
+    <div class="card-header">Peers ({{ peers|length }})</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Interface</th><th>Address</th><th>Quota</th><th>TX</th><th>RX</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for p in peers %}
+        <tr>
+          <td><a href="{{ url_for('peer_detail', peer_id=p['id']) }}" class="peer-name">{{ p['comment'] or '—' }}</a></td>
+          <td><span class="badge badge-blue">{{ p['interface'] }}</span></td>
+          <td class="mono">{{ p['allowed_address'] }}</td>
+          <td>{{ p['quota_bytes'] | humanize if p['quota_bytes'] else 'Unlimited' }}</td>
+          <td>{{ p['total_tx'] | humanize }}</td>
+          <td>{{ p['total_rx'] | humanize }}</td>
+          <td>{% if p['disabled'] %}<span class="badge badge-red">Disabled</span>
+          {% else %}<span class="badge badge-green">Active</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr class="empty-row"><td colspan="7">No peers.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+function toggleIface(name) {
+  const cb  = document.getElementById('iface_' + name);
+  const div = document.getElementById('iface_opts_' + name);
+  div.style.display = cb.checked ? 'block' : 'none';
+}
+</script>
+{% endblock %}
+{% endblock %}
