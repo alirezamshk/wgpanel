@@ -211,3 +211,17 @@ Data is preserved in the volume.
 MIT License — Free to use and modify.
 
 *Design & Developed by Alireza.Msh*
+
+---
+
+## Support the Project
+
+If you find WireGuard Panel useful, consider supporting development:
+
+| Network | Address |
+|---------|---------|
+| USDT (BSC / BEP20) | `0x42A49E14dc723f7C6ba9EC007F1B78683F5C91E6` |
+| TRX (Tron) | `TMqSDBmotKjVrx3sdPYHswF98pd2mzwP4Q` |
+| USDT (TRC20) | `TMqSDBmotKjVrx3sdPYHswF98pd2mzwP4Q` |
+
+⭐ Also consider starring the repo on GitHub — it helps a lot!

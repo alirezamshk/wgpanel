@@ -208,3 +208,17 @@ docker compose down && docker compose up -d
 MIT License — آزاد برای استفاده و تغییر.
 
 *طراحی و توسعه توسط Alireza.Msh*
+
+---
+
+## حمایت از پروژه
+
+اگر WireGuard Panel برایتان مفید بوده، می‌توانید از توسعه آن حمایت کنید:
+
+| شبکه | آدرس |
+|------|------|
+| USDT (BSC / BEP20) | `0x42A49E14dc723f7C6ba9EC007F1B78683F5C91E6` |
+| TRX (Tron) | `TMqSDBmotKjVrx3sdPYHswF98pd2mzwP4Q` |
+| USDT (TRC20) | `TMqSDBmotKjVrx3sdPYHswF98pd2mzwP4Q` |
+
+⭐ ستاره دادن به repo در GitHub هم کمک بزرگیه!
