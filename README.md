@@ -1,4 +1,4 @@
-# WireGuard Panel v1.1.1
+# Mikrotik WireGuard Panel v1.1.1
 
 A lightweight web-based management panel for WireGuard peers on MikroTik routers.
 Built with Flask + SQLite. Runs as a Docker container or directly inside a MikroTik Alpine container.
