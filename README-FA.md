@@ -39,7 +39,7 @@ docker run -d \
 ### روش ۲ — Docker Compose (توصیه شده)
 
 ```bash
-curl -O https://raw.githubusercontent.com/YOUR_USERNAME/wgpanel/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/alirezamshk/wgpanel/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -130,7 +130,7 @@ apk add python3 py3-pip wireguard-tools libqrencode-tools
 pip install --break-system-packages flask routeros-api "qrcode[pil]" pillow
 
 mkdir -p /app /data
-wget https://github.com/YOUR_USERNAME/wgpanel/releases/latest/download/wgpanel.tar.gz
+wget https://github.com/alirezamshk/wgpanel/releases/latest/download/wgpanel.tar.gz
 tar xzf wgpanel.tar.gz -C /app/
 python3 /app/app.py &
 ```
