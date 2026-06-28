@@ -39,7 +39,7 @@ Open `http://YOUR_SERVER_IP:5050` — the setup wizard will guide you through co
 ### Option 2 — Docker Compose (recommended)
 
 ```bash
-curl -O https://raw.githubusercontent.com/YOUR_USERNAME/wgpanel/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/alirezamshk/wgpanel/main/docker-compose.yml
 docker compose up -d
 ```
 
